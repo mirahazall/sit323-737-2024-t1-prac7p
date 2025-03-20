@@ -1,0 +1,45 @@
+# This file defines a Kubernetes Deployment and Service for the calculator-microservice. It deploys a Node.js microservice.
+# To deploy: kubectl apply -f scripts/deploy.yaml
+
+
+apiVersion: apps/v1 # Specifies the Kubernetes API version for Deployments
+kind: Deployment # Declares this resource as a Deployment
+metadata:
+  name: calculator-microservice # Name of the Deployment
+spec:
+  replicas: 1 # Number of pod replicas to maintain
+  selector:
+    matchLabels:
+      app: calculator-microservice # Ensures pods with this label are managed by this Deployment
+  template: # Defines the pod template for this Deployment
+    metadata:
+      labels:
+        app: calculator-microservice  # Labels the pod for identification and selection
+    spec:
+      containers: 
+      - name: calculator-microservice # Name of the container inside the pod
+        image: calculator-microservice # Docker image for the container 
+        imagePullPolicy: Never # Prevents Kubernetes from pulling the image from a registry (useful for local development)
+        ports:
+        - containerPort: 3000 # Exposes port 3000 inside the container
+
+---  # A new Kubernetes resource definition follows
+
+# Defines the Service resource
+apiVersion: v1 # Specifies the Kubernetes API version for Services
+kind: Service # Declares this resource as a Service
+metadata:
+  name: calculator-microservice # Name of the Service
+spec:
+  selector:
+    app: calculator-microservice # Selects pods with this label to route traffic to
+  type: NodePort # Exposes the service on a static port on each node in the cluster
+  ports:
+    - protocol: TCP # Specifies TCP as the communication protocol
+      port: 80       # Exposes the service on port 80 externally
+      targetPort: 3000  # Forwards traffic to the container's port 3000
+      nodePort: 30000  # Exposes the service on a specific port (must be between 30000-32767)
+
+
+
+
