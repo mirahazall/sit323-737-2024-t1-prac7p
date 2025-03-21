@@ -6,7 +6,7 @@ version: "3.8"
 
 services: #This lists the service (container) that the application will use. Each service runs in its own container, we can configure each one separately.
   calculator:
-    image: calculator-microservice #Specifies the Docker image used to create the container.
+    image: calculator-microservice:v2 #Specifies the Docker image used to create the container.
     build: .
     ports: #Maps the container's internal ports to ports on our host machine, making it accessible from the outside.
       - "3000:3000"
