@@ -59,9 +59,16 @@
                 <option value="modulo">Modulo (%)</option>
             </select>
             <input type="number" id="number2" class="form-control mb-3" placeholder="Second Number">
-            <button onclick="calculate()" id="calculateButton" class="btn btn-success">Calculate</button>
+            <button id="calculateButton" class="btn btn-success">Calculate</button>
             <div id="result"></div>
         </div>
+    </div>
+        
+        <!-- Calculations History Section -->
+    <div class="jumbotron calc-history">
+        <h4 class="text-center">Calculation History</h4>
+        <div id="calculationList"></div>
+      </div>
     </div>
     <script src="js/script.js"></script>
 </body>
