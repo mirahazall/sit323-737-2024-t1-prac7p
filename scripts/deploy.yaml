@@ -1,66 +1,69 @@
-# This file defines a Kubernetes Deployment and Service for the calculator-microservice. It deploys a Node.js microservice.
-# To deploy: kubectl apply -f scripts/deploy.yaml
+# ===============================
+# Deployment for Calculator Microservice
+# ===============================
 
-apiVersion: apps/v1 # Specifies the Kubernetes API version for Deployments
-kind: Deployment # Declares this resource as a Deployment
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: calculator-microservice # Name of the Deployment
+  name: calculator-microservice
 spec:
-  replicas: 1 # Number of pod replicas to maintain
+  replicas: 1  # Only one instance of the microservice
   selector:
     matchLabels:
-      app: calculator-microservice # Ensures pods with this label are managed by this Deployment
-  template: # Defines the pod template for this Deployment
+      app: calculator-microservice
+  template:
     metadata:
       labels:
-        app: calculator-microservice  # Labels the pod for identification and selection
+        app: calculator-microservice
     spec:
-      containers: 
-      - name: calculator-microservice # Name of the container inside the pod
-        image: calculator-microservice:latest # Docker image for the container 
-        imagePullPolicy: Never # Prevents Kubernetes from pulling the image from a registry (useful for local development)
+      containers:
+      - name: calculator-microservice
+        image: mirahazall/calculator-microservice:latest  # Public Docker Hub image
+        imagePullPolicy: Always  # Always pull the latest version
         ports:
-        - containerPort: 3000 # Exposes port 3000 inside the container
-        readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-        startupProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 10
+        - containerPort: 3000  # App runs on port 3000
+        readinessProbe:  # Check if the app is ready to receive traffic
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        startupProbe:  # Check if the app starts up correctly
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
         env:
-        - name: MONGO_URI
+        - name: MONGO_URI  # MongoDB connection string from secret
           valueFrom:
             secretKeyRef:
               name: mongodb-credentials
               key: mongo-uri
 
+---
 
----  # A new Kubernetes resource definition follows
+# ===============================
+# External LoadBalancer Service for Calculator App
+# ===============================
 
-# Defines the Service resource
-apiVersion: v1 # Specifies the Kubernetes API version for Services
-kind: Service # Declares this resource as a Service
+apiVersion: v1
+kind: Service
 metadata:
-  name: calculator-microservice # Name of the Service
+  name: calculator-microservice
 spec:
   selector:
-    app: calculator-microservice # Selects pods with this label to route traffic to
-  type: NodePort # Exposes the service on a static port on each node in the cluster
+    app: calculator-microservice
+  type: LoadBalancer  # Exposes the service externally via cloud provider
   ports:
-    - protocol: TCP # Specifies TCP as the communication protocol
-      port: 80       # Exposes the service on port 80 externally
-      targetPort: 3000  # Forwards traffic to the container's port 3000
-      nodePort: 30000
-
- # A new Kubernetes resource definition (MongoDB Deployment)
-
+    - protocol: TCP
+      port: 80  # External port
+      targetPort: 3000  # Maps to container’s port
 ---
+
+# ===============================
+# PersistentVolumeClaims for MongoDB
+# ===============================
 
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -68,11 +71,10 @@ metadata:
   name: mongodb-pvc
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteOnce  # Only one pod can write at a time
   resources:
     requests:
-      storage: 2Gi
-
+      storage: 2Gi  # 2GiB storage for database
 ---
 
 apiVersion: v1
@@ -84,10 +86,14 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
-
+      storage: 1Gi  # 1GiB for backups
 
 ---
+
+# ===============================
+# MongoDB Deployment
+# ===============================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -122,19 +128,24 @@ spec:
               value: "calculatorDB"
           volumeMounts:
             - name: mongodb-storage
-              mountPath: /data/db
+              mountPath: /data/db  # MongoDB stores its data here
       volumes:
         - name: mongodb-storage
           persistentVolumeClaim:
             claimName: mongodb-pvc
 
 ---
+
+# ===============================
+# Internal Service for MongoDB
+# ===============================
+
 apiVersion: v1
 kind: Service
 metadata:
   name: mongodb
 spec:
-  type: ClusterIP  # Ensures the service is only accessible inside the cluster
+  type: ClusterIP  # Only accessible within the cluster
   ports:
     - port: 27017
       targetPort: 27017
@@ -142,12 +153,17 @@ spec:
     app: mongodb
 
 ---
+
+# ===============================
+# MongoDB Backup CronJob
+# ===============================
+
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: mongodb-backup
 spec:
-  schedule: "*/1 * * * *"  # Runs daily at midnight
+  schedule: "*/1 * * * *"  # Runs every minute (change as needed)
   jobTemplate:
     spec:
       template:

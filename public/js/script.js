@@ -1,3 +1,5 @@
+require('dotenv').config();
+const backend_url = 'http://calculatorapp.duckdns.org';
 /**
  * Event listener to ensure that the "Calculate" button triggers the calculate function 
  * when the DOM is fully loaded.
@@ -42,7 +44,7 @@ function calculate(){
 }
 
     // Sends a POST request to the backend API to perform the calculation
-    fetch(`http://localhost:30000/${operation}`, {
+    fetch(`${backend_url}/${operation}`, {
         method: "POST", // Set the request method to POST
         headers: {"Content-Type": "application/json"}, // Set the content type to JSON for the body data
         body: JSON.stringify({ 
@@ -67,7 +69,7 @@ function calculate(){
 
 // Loads all saved calculations from the backend and displays them on the page
 function loadCalculations(){
-    fetch("http://localhost:30000/calculations") // Requests all calculations
+    fetch(`${backend_url}/calculations`) // Requests all calculations
     .then(res => res.json())
     .then(data => {
         const container = document.getElementById("calculationList");
@@ -92,7 +94,7 @@ function loadCalculations(){
 
 // Deletes a calculation by ID and reloads the list
 function deleteCalculation(id){
-    fetch(`http://localhost:30000/calculations/${id}`, {
+    fetch(`${backend_url}/calculations/${id}`, {
         method: "DELETE"
     })
     .then(() => {
@@ -137,7 +139,7 @@ function updateCalculation(id) {
                                     ''} ${number2 || 0}`);
 
     // Sends PUT request to update the calculation
-    fetch(`http://localhost:30000/calculations/${id}`, {
+    fetch(`${backend_url}/calculations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ operation, number1, number2, result })
