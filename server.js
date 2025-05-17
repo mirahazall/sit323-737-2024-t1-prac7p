@@ -10,6 +10,7 @@ var express = require('express'); // Imports the express module
 const winston = require('winston'); // Imports winston for logging
 const mongoose = require('mongoose'); //imports mongodb client
 const Calculation = require("./models/calculation");
+const cors = require('cors');
 require('dotenv').config();
 
 const mongoUri = process.env.MONGO_URI;
@@ -41,13 +42,14 @@ const logger = winston.createLogger({
 var app = express(); // Initializes Express application
 var port = 3000; // Defines the port for the server
 
+app.use(cors());
 app.use(express.static('public')); //Middleware to serve static files inside the `public` directory such as `index.html`
 app.use(express.json()); // Middleware to parse JSON requests
 
 // Function to validate numbers. It checks if both entered values are numbers.
 function validateNumbers(number1, number2){
     if(typeof number1 !== "number" || typeof number2 !== "number"){
-        return res.status(400).json({error: "num1 and num2 must be numbers"});
+        return "number1 and number2 must be numbers";
     }
     return null;
 }
@@ -257,14 +259,13 @@ app.post("/square-root", async (req,res) => {
         level: 'error',
         message:'Invalid numbers provided"'
     })
-    return res.status(400).json({error: 'Invalid number provided"'})
+    return res.status(400).json({error: 'Invalid number provided'})
    }
    if(number1 < 0){ //Makes sure the number is not negative
     logger.log({
         level: 'error',
         message: "Cannot compute the square root of a negative number"
     })
-    alert("Cannot compute the square root of a negative number");
     return res.status(400).json({error: 'Cannot compute the square root of a negative number'});
    }else{
     const result = Math.sqrt(number1);

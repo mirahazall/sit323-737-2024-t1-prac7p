@@ -1,4 +1,3 @@
-require('dotenv').config();
 const backend_url = 'http://calculatorapp.duckdns.org';
 /**
  * Event listener to ensure that the "Calculate" button triggers the calculate function 
