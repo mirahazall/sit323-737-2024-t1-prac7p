@@ -1,0 +1,26 @@
+#Use "docker-compose up -d" command to create the container and start it.
+#This command will read the docker-compose.yml file, pull the necessary images if they're not already available locally, create the containers, and start them.
+
+#This defines the version of the Docker Compose file format we're using. Version 3 is the most commonly used version today.
+version: "3.8"
+
+services: #This lists the service (container) that the application will use. Each service runs in its own container, we can configure each one separately.
+  calculator:
+    image: calculator-microservice:v1 #Specifies the Docker image used to create the container.
+    build: .
+    ports: #Maps the container's internal ports to ports on our host machine, making it accessible from the outside.
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"] #Health check URL
+      interval: 30s # How often to check
+      retries: 3 # How many retries before considering the container unhealthy
+      timeout: 10s # How long to wait for the check to respond
+      start_period: 10s # Time to wait before starting health checks after container starts
+      disable: false # Set to true to disable health check if not needed
+    restart: always # Restart container if it becomes unhealthy
+    volumes: #Mounts local files or directories to a location inside the container (useful for persisting data or sharing files).
+      - .:/app
+      - /app/node_modules
+    environment: #Sets environment variables inside the container.
+      - NODE_ENV=production
+    MONGO_URI: mongodb://hazalyildiz:hazalpassword@mongodb:27017/calculatorDB?authSource=admin

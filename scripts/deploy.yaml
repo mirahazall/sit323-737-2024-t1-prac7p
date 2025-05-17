@@ -1,0 +1,182 @@
+# This file defines a Kubernetes Deployment and Service for the calculator-microservice. It deploys a Node.js microservice.
+# To deploy: kubectl apply -f scripts/deploy.yaml
+
+apiVersion: apps/v1 # Specifies the Kubernetes API version for Deployments
+kind: Deployment # Declares this resource as a Deployment
+metadata:
+  name: calculator-microservice # Name of the Deployment
+spec:
+  replicas: 1 # Number of pod replicas to maintain
+  selector:
+    matchLabels:
+      app: calculator-microservice # Ensures pods with this label are managed by this Deployment
+  template: # Defines the pod template for this Deployment
+    metadata:
+      labels:
+        app: calculator-microservice  # Labels the pod for identification and selection
+    spec:
+      containers: 
+      - name: calculator-microservice # Name of the container inside the pod
+        image: calculator-microservice:latest # Docker image for the container 
+        imagePullPolicy: Never # Prevents Kubernetes from pulling the image from a registry (useful for local development)
+        ports:
+        - containerPort: 3000 # Exposes port 3000 inside the container
+        readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+        startupProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+        env:
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-credentials
+              key: mongo-uri
+
+
+---  # A new Kubernetes resource definition follows
+
+# Defines the Service resource
+apiVersion: v1 # Specifies the Kubernetes API version for Services
+kind: Service # Declares this resource as a Service
+metadata:
+  name: calculator-microservice # Name of the Service
+spec:
+  selector:
+    app: calculator-microservice # Selects pods with this label to route traffic to
+  type: NodePort # Exposes the service on a static port on each node in the cluster
+  ports:
+    - protocol: TCP # Specifies TCP as the communication protocol
+      port: 80       # Exposes the service on port 80 externally
+      targetPort: 3000  # Forwards traffic to the container's port 3000
+      nodePort: 30000
+
+ # A new Kubernetes resource definition (MongoDB Deployment)
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-backup-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: mongo-username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: mongo-password
+            - name: MONGO_INITDB_DATABASE
+              value: "calculatorDB"
+          volumeMounts:
+            - name: mongodb-storage
+              mountPath: /data/db
+      volumes:
+        - name: mongodb-storage
+          persistentVolumeClaim:
+            claimName: mongodb-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  type: ClusterIP  # Ensures the service is only accessible inside the cluster
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: mongodb
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongodb-backup
+spec:
+  schedule: "*/1 * * * *"  # Runs daily at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: mongodb-backup
+            image: mongo:latest
+            command: ["sh", "-c"]
+            args:
+              - >
+                mongodump --uri="$MONGO_URI" --out=/backup/$(date +\%F)
+            env:
+              - name: MONGO_URI
+                valueFrom:
+                  secretKeyRef:
+                    name: mongodb-credentials
+                    key: mongo-uri
+            volumeMounts:
+              - name: backup-storage
+                mountPath: /backup
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: mongo-backup-pvc
+
+
+
+
+
+
+
